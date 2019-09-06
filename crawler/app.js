@@ -27,14 +27,18 @@ exports.lambdaHandler = async event => {
 const extractWebsiteUrls = async websiteUrl => {
   const sitemapUrls = [...await siteMapUrls(extractDomainName(websiteUrl))];
   const allUrls = [];
+  const processed = [];
   while (sitemapUrls.length) {
     try {
-      const response = await get(sitemapUrls.pop(), { timeout: 1000, followRedirect: false }).promise();
+      const currentSitemap = sitemapUrls.pop();
+      processed.push(currentSitemap);
+
+      const response = await get(currentSitemap, { timeout: 1000, followRedirect: false }).promise();
       const { sitemaps, urls } = await transform(response, {
         sitemaps: ['sitemapindex/sitemap', { loc: 'loc' }],
         urls: ['/urlset/url', { loc: 'loc' }]
       });
-      sitemapUrls.push(...(sitemaps || []).map(({ loc }) => loc));
+      sitemapUrls.push(...(sitemaps || []).map(({ loc }) => loc).filter(sitemap => !processed.includes(sitemap)));
       allUrls.push(...(urls || []).map(({ loc }) => loc));
     } catch (error) {
       console.error(`There was an error while processing sitemap.xml: `, error.stack || error);
