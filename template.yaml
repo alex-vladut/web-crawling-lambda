@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  crawling
+
+  Sample SAM Template for crawling
+
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 1024
+    Environment:
+      Variables:
+        S3_BUCKET: !Ref CrawlerResultsBucket
+        REGION: !Ref "AWS::Region"
+
+Resources:
+  CrawlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: crawler/
+      Handler: app.lambdaHandler
+      Runtime: nodejs10.x
+      Events:
+        CrawlWebsiteSQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt CrawlerSqsQueue.Arn
+            BatchSize: 1
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref CrawlerResultsBucket
+
+  CrawlerSqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 120
+
+  CrawlerResultsBucket:
+    Type: AWS::S3::Bucket
+
+Outputs:
+  CrawlerFunction:
+    Description: "Web Crawler Lambda Function ARN"
+    Value: !GetAtt CrawlerFunction.Arn
+  CrawlerFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt CrawlerFunctionRole.Arn
